@@ -1,0 +1,7 @@
+build/
+outputs/
+
+.vscode/
+.DS_Store
+
+src/*example*
