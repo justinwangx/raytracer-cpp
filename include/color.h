@@ -4,21 +4,30 @@
 #include <iostream>
 #include "vec3.h"
 
-void write_color(std::ostream &out, color pixel_color, int samples_per_pixel) {
-    auto r = pixel_color.x();
+color gamma_correct_and_scale(const color& pixel_color, int samples_per_pixel) {
+    auto r = pixel_color.x();   
     auto g = pixel_color.y();
     auto b = pixel_color.z();
 
     // scale color values by number of samples and gamma correct for gamma=2
-    auto scale = 1.0 / samples_per_pixel;
-    r  = sqrt(r * scale);
-    g  = sqrt(g * scale);
-    b  = sqrt(b * scale);
+    float scale = 1.0 / samples_per_pixel;
+    r = sqrt(r * scale) * 255.999;
+    g = sqrt(g * scale) * 255.999;
+    b = sqrt(b * scale) * 255.999;
 
-    // Write the translated [0,255] value of each color component.
-    out << static_cast<int>(255.999 * clamp(r, 0.0, 0.999)) << ' '
-        << static_cast<int>(255.999 * clamp(g, 0.0, 0.999)) << ' '
-        << static_cast<int>(255.999 * clamp(b, 0.0, 0.999)) << '\n';
+    return color(
+        static_cast<int>(clamp(r, 0.0, 255.0)),
+        static_cast<int>(clamp(g, 0.0, 255.0)),
+        static_cast<int>(clamp(b, 0.0, 255.0))
+    );
+}
+
+void write_color(std::ostream &out, const color& pixel_color, int samples_per_pixel) {
+    color corrected_color = gamma_correct_and_scale(pixel_color, samples_per_pixel);
+
+    out << corrected_color.x() << ' '
+        << corrected_color.y() << ' '
+        << corrected_color.z() << '\n';
 }
 
 #endif
