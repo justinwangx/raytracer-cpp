@@ -7,4 +7,4 @@ set(CMAKE_CXX_STANDARD_REQUIRED True)
 include_directories(include)
 
 # Add the executable and source files
-add_executable(raytracer src/main.cpp)
+add_executable(raytracer src/main.cpp src/stb_image_write_wrapper.cpp)
