@@ -4,6 +4,7 @@
 #include "hittable_list.h"
 #include "material.h"
 #include "sphere.h"
+#include "stb_image_write.h"
 #include <iostream>
 
 color ray_color(const ray& r, const hittable& world, int depth) {
@@ -81,7 +82,8 @@ int main() {
     const auto aspect_ratio = 3.0 / 2.0;
     const int image_width = 1200;
     const int image_height = static_cast<int>(image_width / aspect_ratio);
-    const int samples_per_pixel = 500;
+    const int channels = 3;
+    const int samples_per_pixel = 1;
     const int max_depth = 50;
 
     // World
@@ -99,8 +101,7 @@ int main() {
     camera cam(lookfrom, direction, vup, 20, aspect_ratio, aperture, dist_to_focus);
 
     // Render
- 
-    std::cout << "P3\n" << image_width << " " << image_height << "\n255\n";
+    unsigned char* image_data = new unsigned char[image_width * image_height * channels];
  
     for (int j = image_height-1; j >= 0; --j) {
         std::cerr << "\rScanlines remaining: " << j << ' ' << std::flush;
@@ -112,9 +113,20 @@ int main() {
                 ray r = cam.get_ray(u, v);
                 pixel_color += ray_color(r, world, max_depth);
             }
-            write_color(std::cout, pixel_color, samples_per_pixel);
+            color corrected_color = gamma_correct_and_scale(pixel_color, samples_per_pixel);
+
+            int index = ((image_height - 1 -j) * image_width + i) * channels;
+            image_data[index] = corrected_color.x();
+            image_data[index + 1] = corrected_color.y();
+            image_data[index + 2] = corrected_color.z();
         }
     }
 
+    // Write JPEG to file
+    const char* output_filename = "render.jpg";
+    int quality = 100;
+    stbi_write_jpg(output_filename, image_width, image_height, channels, image_data, quality);
+
+    delete[] image_data;
     std::cerr << "\nDone.\n";
 }
