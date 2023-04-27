@@ -141,6 +141,12 @@ vec3 random_in_unit_disk() {
     }
 }
 
+inline vec3 direction_from_pitch_yaw(const float pitch, const float yaw) {
+    const float pitch_rad = degrees_to_radians(pitch);
+    const float yaw_rad = degrees_to_radians(yaw);
+    return vec3(-cos(pitch_rad) * sin(yaw_rad), -sin(pitch_rad), cos(pitch_rad) * cos(yaw_rad));
+}
+
 // type aliases
 using point3 = vec3;
 using color = vec3;

@@ -7,7 +7,7 @@ class camera {
     public:
         camera(
             point3 look_from,
-            point3 look_at, // change to viewing direction
+            vec3 viewing_direction,
             vec3 vup,
             float vfov, // vertical field of view in degrees
             float aspect_ratio,
@@ -19,7 +19,7 @@ class camera {
             float viewport_height = 2.0 * h; 
             float viewport_width = viewport_height * aspect_ratio;
 
-            auto w = unit_vector(look_from - look_at);
+            auto w = unit_vector(viewing_direction);
             auto u = unit_vector(cross(vup, w));
             auto v = cross(w, u);
 
