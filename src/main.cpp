@@ -4,29 +4,29 @@
 #include "hittable_list.h"
 #include "material.h"
 #include "sphere.h"
+#include "rectangles.h"
 #include "stb_image_write.h"
 #include <iostream>
+
 
 color ray_color(const ray& r, const hittable& world, int depth) {
     hit_record rec;
 
-    // limit how many child rays we recurse
-    if (depth <= 0) {
-        return color(0, 0, 0);
-    }
+    // If we've exceeded the ray bounce limit, no more light is gathered.
+    if (depth <= 0)
+        return color(0,0,0);
 
-    if (world.hit(r, 0.001, infinity, rec)) {
-        color attenuation;
-        ray scattered;
-        if (rec.mat_ptr->scatter(r, rec, attenuation, scattered)) {
-            return attenuation * ray_color(scattered, world, depth-1);
-        }
+    if (!world.hit(r, 0.001, infinity, rec))
         return color(0, 0, 0);
-    }
 
-    vec3 unit_direction = unit_vector(r.direction());
-    auto t = 0.5*(unit_direction.y() + 1.0);
-    return (1.0-t)*color(1.0, 1.0, 1.0) + t*color(0.5, 0.7, 1.0);
+    ray scattered;
+    color attenuation;
+    color emitted = rec.mat_ptr->emitted(rec.u, rec.v, rec.p);
+
+    if (!rec.mat_ptr->scatter(r, rec, attenuation, scattered))
+        return emitted;
+
+    return emitted + attenuation * ray_color(scattered, world, depth-1);
 }
 
 hittable_list random_scene() {
@@ -75,30 +75,54 @@ hittable_list random_scene() {
     return world;
 }
 
+hittable_list cornell_box() {
+    hittable_list world;
+
+    auto red = make_shared<lambertian>(color(0.65, 0.05, 0.05));
+    auto white = make_shared<lambertian>(color(0.73, 0.73, 0.73));
+    auto green = make_shared<lambertian>(color(0.12, 0.45, 0.15));
+    auto light = make_shared<diffuse_light>(color(15, 15, 15));
+
+    world.add(make_shared<yz_rect>(0, 555, 0, 555, 555, green));
+    world.add(make_shared<yz_rect>(0, 555, 0, 555, 0, red));
+    world.add(make_shared<xz_rect>(213, 343, 227, 332, 554, light));
+    world.add(make_shared<xz_rect>(0, 555, 0, 555, 555, white));
+    world.add(make_shared<xz_rect>(0, 555, 0, 555, 0, white));
+    world.add(make_shared<xy_rect>(0, 555, 0, 555, 555, white));
+
+    // Two objects inside the Cornell Box
+    shared_ptr<material> glass = make_shared<dielectric>(1.5);
+    world.add(make_shared<sphere>(point3(190, 90, 190), 90, glass));
+
+    shared_ptr<material> metal_material = make_shared<metal>(color(0.8, 0.85, 0.88), 0.0);
+    world.add(make_shared<sphere>(point3(350, 100, 345), 100, metal_material));
+
+    return world;
+}
+
 int main() {
 
     // Image
 
-    const auto aspect_ratio = 3.0 / 2.0;
-    const int image_width = 1200;
+    const auto aspect_ratio = 1.0 / 1.0;
+    const int image_width = 600;
     const int image_height = static_cast<int>(image_width / aspect_ratio);
     const int channels = 3;
-    const int samples_per_pixel = 1;
+    const int samples_per_pixel = 1000;
     const int max_depth = 50;
 
     // World
-    auto world = random_scene(); 
+    auto world = cornell_box(); 
 
     // Camera
-    point3 lookfrom(13,2,3);
-    float pitch = -8.5255;
-    float yaw = -77.0054;
-    vec3 direction = direction_from_pitch_yaw(pitch, yaw);
+    point3 lookfrom(278, 278, -800);
+    point3 lookat(278, 278, 0);
     vec3 vup(0,1,0);
+    float vfov = 40.0;
     auto dist_to_focus = 10.0;
-    auto aperture = 0.1;
+    auto aperture = 0.0;
 
-    camera cam(lookfrom, direction, vup, 20, aspect_ratio, aperture, dist_to_focus);
+    camera cam(lookfrom, lookat, vup, vfov, aspect_ratio, aperture, dist_to_focus);
 
     // Render
     unsigned char* image_data = new unsigned char[image_width * image_height * channels];
@@ -123,7 +147,7 @@ int main() {
     }
 
     // Write JPEG to file
-    const char* output_filename = "render.jpg";
+    const char* output_filename = "scene2.jpg";
     int quality = 100;
     stbi_write_jpg(output_filename, image_width, image_height, channels, image_data, quality);
 
